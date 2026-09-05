@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Revenue Recovery Agent</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#11161d;
+    --panel-border:#1f2833;
+    --text:#e6ebf0;
+    --muted:#7c8a99;
+    --mint:#3ddc97;
+    --amber:#f5a623;
+    --red:#ef5a5a;
+    --violet:#8b7cf6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:32px 40px 80px;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:28px; flex-wrap:wrap; gap:12px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--mint); box-shadow:0 0 12px var(--mint); animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1} 50%{opacity:.35}}
+  h1{font-size:19px; font-weight:600; margin:0; letter-spacing:.2px;}
+  .sub{color:var(--muted); font-size:13px; margin-top:2px;}
+  button{
+    background:var(--mint); color:#04140d; border:none; border-radius:8px;
+    padding:10px 16px; font-weight:600; font-size:13px; cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  button.ghost{background:transparent; color:var(--muted); border:1px solid var(--panel-border);}
+  .stats{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px; margin-bottom:28px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:12px; padding:18px 20px;
+  }
+  .card .label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px;}
+  .card .value{font-size:26px; font-weight:600; margin-top:8px;}
+  .card.recovered .value{color:var(--mint);}
+  .card.risk .value{color:var(--amber);}
+  .card.alert .value{color:var(--red);}
+  .grid2{display:grid; grid-template-columns:1.6fr 1fr; gap:20px;}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
+  .panel-title{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:12px;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; color:var(--muted); font-weight:500; padding:8px 10px; border-bottom:1px solid var(--panel-border); font-size:11px; text-transform:uppercase; letter-spacing:.4px;}
+  td{padding:10px 10px; border-bottom:1px solid #161c24;}
+  tr:hover td{background:#0e141b;}
+  .badge{padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; display:inline-block;}
+  .b-recovered{background:rgba(61,220,151,.15); color:var(--mint);}
+  .b-analyzing,.b-failed,.b-retry,.b-reminder{background:rgba(245,166,35,.15); color:var(--amber);}
+  .b-action_taken{background:rgba(139,124,246,.15); color:var(--violet);}
+  .b-escalated{background:rgba(239,90,90,.15); color:var(--red);}
+  .b-lost{background:rgba(124,138,153,.15); color:var(--muted);}
+  .badge.simulated{background:rgba(139,124,246,.15); color:var(--violet); margin-left:6px; padding:2px 7px;}
+  .action-retry{color:var(--violet);}
+  .action-reminder{color:var(--amber);}
+  .action-escalate{color:var(--red);}
+  .action-none{color:var(--muted);}
+  .rationale-row{display:none;}
+  .rationale-row td{color:var(--muted); font-size:12px; padding:0 10px 12px; border-bottom:1px solid #161c24;}
+  .detail-panel{padding:14px 12px 6px;}
+  .detail-panel h4{margin:0 0 10px; color:var(--text); font-size:12px; text-transform:uppercase; letter-spacing:.5px;}
+  .timeline{display:grid; gap:10px; margin-top:10px;}
+  .timeline-step{display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-left:2px solid var(--panel-border); padding-left:12px; position:relative;}
+  .timeline-step::before{content:""; position:absolute; left:-6px; top:12px; width:10px; height:10px; border-radius:50%; background:var(--panel-border); border:2px solid #0b0f14;}
+  .timeline-step.done::before{background:var(--mint); box-shadow:0 0 10px rgba(61,220,151,.75);}
+  .timeline-step .step-label{min-width:120px; color:var(--text); font-size:12px;}
+  .timeline-step .step-meta{color:var(--muted); font-size:11px; font-family:'IBM Plex Mono', monospace;}
+  .breakdown-row{display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-bottom:1px solid #161c24;}
+  .breakdown-row:last-child{border-bottom:none;}
+  .empty{color:var(--muted); font-size:13px; padding:20px 0; text-align:center;}
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--panel);
+    border:1px solid var(--panel-border); border-left:3px solid var(--mint);
+    padding:12px 16px; border-radius:8px; font-size:13px; display:none;
+  }
+  button:disabled{opacity:.55; cursor:wait;}
+  .recover-btn{padding:5px 8px; font-size:11px; margin-left:6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="dot"></span>
+    <div>
+      <h1>AI Revenue Recovery Agent</h1>
+      <div class="sub mono">payment.failed → analyze → decide → act → track</div>
+    </div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="ghost" id="refresh-btn" onclick="loadAll()">Refresh</button>
+    <button id="simulate-btn" onclick="simulate()">▸ Simulate failed payment</button>
+  </div>
+</header>
+
+<div class="stats" id="stats"></div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="panel-title">Transactions</div>
+    <table>
+      <thead>
+        <tr><th>Payment ID</th><th>Amount</th><th>Reason</th><th>Decision</th><th>Score</th><th>Status</th><th>Source</th><th>Timestamp</th></tr>
+      </thead>
+      <tbody id="txn-body"></tbody>
+    </table>
+    <div id="txn-empty" class="empty" style="display:none;">No transactions yet — try "Simulate failed payment".</div>
+  </div>
+
+  <div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="panel-title">Actions taken</div>
+      <div id="by-action"></div>
+    </div>
+    <div class="card">
+      <div class="panel-title">Failure reasons</div>
+      <div id="by-reason"></div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <div class="panel-title">Recovery outcomes</div>
+      <div id="by-status"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SAMPLE_FAILURES = [
+  {code:"insufficient_funds", desc:"Insufficient funds in customer's account"},
+  {code:"expired_card", desc:"The card has expired"},
+  {code:"authentication_failed", desc:"OTP verification failed"},
+  {code:"issuer_down", desc:"Issuing bank server unreachable"},
+  {code:"card_declined", desc:"Card declined by issuing bank"},
+  {code:"restricted_card", desc:"Card flagged as restricted"},
+  {code:"velocity_check_exceeded", desc:"Unusual number of attempts detected on this card in a short window"},
+];
+
+const STATUS_LABELS = {
+  failed: 'Failed',
+  analyzing: 'Analyzing',
+  action_taken: 'Action Taken',
+  retry: 'Retry',
+  reminder: 'Reminder',
+  escalated: 'Escalated',
+  recovered: 'Recovered',
+  lost: 'Lost'
+};
+
+const SOURCE_LABELS = {
+  rules: 'Rules',
+  claude: 'Claude',
+  fallback: 'Fallback'
+};
+
+function fmtMoney(n){ return "₹" + Number(n).toLocaleString("en-IN", {maximumFractionDigits:0}); }
+function fmtPct(n){ return n + "%"; }
+function formatTimestamp(value){
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'});
+}
+
+function buildTimeline(txn){
+  const failedAt = txn.created_at || null;
+  const analyzedAt = txn.updated_at || failedAt;
+  const decisionAt = txn.updated_at || failedAt;
+  const actionAt = txn.recovered_at || txn.updated_at || analyzedAt;
+  const finalAt = txn.recovered_at || txn.updated_at || actionAt || failedAt;
+
+  const steps = [
+    { label: 'Payment failed', done: Boolean(failedAt), time: failedAt },
+    { label: 'Failure analyzed', done: ['analyzing', 'action_taken', 'retry', 'reminder', 'escalated', 'recovered', 'lost'].includes(txn.status), time: analyzedAt },
+    { label: 'Decision made', done: Boolean(txn.decided_action), time: decisionAt },
+    { label: 'Recovery action', done: ['action_taken', 'retry', 'reminder', 'escalated', 'recovered'].includes(txn.status), time: actionAt },
+    { label: txn.status === 'recovered' ? 'Recovered' : txn.status === 'escalated' ? 'Escalated' : txn.status === 'lost' ? 'Lost' : 'Outcome pending', done: ['recovered', 'escalated', 'lost'].includes(txn.status), time: finalAt }
+  ];
+
+  return `
+    <div class="detail-panel">
+      <h4>Recovery timeline</h4>
+      <div class="timeline">
+        ${steps.map(step => `
+          <div class="timeline-step ${step.done ? 'done' : ''}">
+            <div class="step-label">${step.label}</div>
+            <div class="step-meta">${step.time ? formatTimestamp(step.time) : 'Pending'}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function loadStats(){
+  const r = await fetch('/dashboard/stats');
+  if (!r.ok) throw new Error('Could not load dashboard metrics');
+  const s = await r.json();
+  document.getElementById('stats').innerHTML = `
+    <div class="card risk">
+      <div class="label">Revenue at risk</div>
+      <div class="value mono">${fmtMoney(s.total_revenue_at_risk)}</div>
+    </div>
+    <div class="card recovered">
+      <div class="label">Revenue recovered</div>
+      <div class="value mono">${fmtMoney(s.total_revenue_recovered)}</div>
+    </div>
+    <div class="card">
+      <div class="label">Recovery rate</div>
+      <div class="value mono">${fmtPct(s.recovery_rate_pct)}</div>
+    </div>
+    <div class="card">
+      <div class="label">Failed transactions</div>
+      <div class="value mono">${s.total_failed_transactions}</div>
+    </div>
+    <div class="card">
+      <div class="label">Recovery attempts</div>
+      <div class="value mono">${s.recovery_attempts ?? 0}</div>
+    </div>
+    <div class="card alert">
+      <div class="label">Escalations</div>
+      <div class="value mono">${s.escalations ?? 0}</div>
+    </div>
+  `;
+  const actionHtml = Object.entries(s.by_action).map(([k,v]) =>
+    `<div class="breakdown-row"><span class="action-${k}">${k}</span><span class="mono">${v}</span></div>`
+  ).join('') || '<div class="empty">No decisions yet</div>';
+  document.getElementById('by-action').innerHTML = actionHtml;
+
+  const reasonHtml = Object.entries(s.by_reason).map(([k,v]) =>
+    `<div class="breakdown-row"><span>${k.replace(/_/g,' ')}</span><span class="mono">${v}</span></div>`
+  ).join('') || '<div class="empty">No decisions yet</div>';
+  document.getElementById('by-reason').innerHTML = reasonHtml;
+  document.getElementById('by-status').innerHTML = Object.entries(s.by_status).map(([k,v]) =>
+    `<div class="breakdown-row"><span>${k.replace(/_/g,' ')}</span><span class="mono">${v}</span></div>`
+  ).join('') || '<div class="empty">No outcomes yet</div>';
+}
+
+async function loadTransactions(){
+  const r = await fetch('/transactions');
+  if (!r.ok) throw new Error('Could not load transactions');
+  const txns = await r.json();
+  const body = document.getElementById('txn-body');
+  document.getElementById('txn-empty').style.display = txns.length ? 'none' : 'block';
+  body.innerHTML = txns.map(t => `
+    <tr onclick="toggleRationale(${t.id})" style="cursor:pointer;">
+      <td class="mono">
+        ${t.razorpay_payment_id || `#${t.id}`}
+        ${String(t.razorpay_payment_id || '').startsWith('demo_') ? '<span class="badge simulated">Simulated</span>' : ''}
+      </td>
+      <td class="mono">${fmtMoney(t.amount)}</td>
+      <td>${(t.failure_reason||'—').replace(/_/g,' ')}</td>
+      <td class="action-${t.decided_action||'none'}">${(t.decided_action||'—').replace(/_/g,' ')}</td>
+      <td class="mono">${t.recovery_score!=null ? Math.round(t.recovery_score*100)+'%' : '—'}</td>
+      <td><span class="badge b-${t.status}">${(STATUS_LABELS[t.status] || t.status.replace(/_/g,' '))}</span>${t.status === 'action_taken' ? `<button class="ghost recover-btn" onclick="event.stopPropagation(); markRecovered(${t.id})">Simulate recovery success</button>` : ''}</td>
+      <td class="mono" style="color:var(--muted)">${SOURCE_LABELS[t.decision_source] || t.decision_source || '—'}</td>
+      <td class="mono" style="color:var(--muted)">${formatTimestamp(t.created_at)}</td>
+    </tr>
+    <tr class="rationale-row" id="rationale-${t.id}">
+      <td colspan="8">
+        <div class="detail-panel">
+          <h4>Decision rationale</h4>
+          <div>${t.decision_rationale || 'No rationale recorded.'}</div>
+          ${buildTimeline(t)}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function toggleRationale(id){
+  const row = document.getElementById('rationale-'+id);
+  row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(()=> t.style.display='none', 3500);
+}
+
+async function simulate(){
+  const button = document.getElementById('simulate-btn');
+  button.disabled = true;
+  const f = SAMPLE_FAILURES[Math.floor(Math.random()*SAMPLE_FAILURES.length)];
+  const amount = Math.floor(Math.random()*4000)+299;
+  try {
+    const res = await fetch('/simulate/failed-payment', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        amount, currency:"INR",
+        failure_code:f.code, failure_description:f.desc,
+        customer_email:"customer@example.com", customer_phone:"9999999999"
+      })
+    });
+    if (!res.ok) throw new Error('Simulation failed');
+    const txn = await res.json();
+    showToast(`Agent decided: ${txn.decided_action} (${Math.round((txn.recovery_score||0)*100)}% recovery chance)`);
+    await loadAll();
+  } catch (error) { showToast(error.message); }
+  finally { button.disabled = false; }
+}
+
+async function markRecovered(id){
+  const button = event && event.target ? event.target : null;
+  if (button) button.disabled = true;
+  try {
+    const res = await fetch(`/transactions/${id}/mark-recovered`, {method:'POST'});
+    if (!res.ok) throw new Error('Recovery simulation failed');
+    showToast('Simulated Recovery recorded');
+    await loadAll();
+  } catch (error) { showToast(error.message); }
+  finally { if (button) button.disabled = false; }
+}
+
+async function loadAll(){
+  const button = document.getElementById('refresh-btn');
+  button.disabled = true;
+  try { await Promise.all([loadStats(), loadTransactions()]); }
+  catch (error) { showToast(error.message); }
+  finally { button.disabled = false; }
+}
+loadAll();
+setInterval(loadAll, 8000);
+</script>
+</body>
+</html>
