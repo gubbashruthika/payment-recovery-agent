@@ -1,4 +1,4 @@
-and `rationale`. The application validates the action and score. Missing keys,
+ The application validates the action and score. Missing keys,
 the same recovery engine as webhooks, and `Simulate recovery success` marks an
 before accepting Razorpay events; an unset secret never bypasses verification.
 the sum of stored `recovered_amount` values. Recovery Rate is recovered revenue
